@@ -1,0 +1,4 @@
+logging:
+  level:
+    com.lipaharaka.api: DEBUG
+    org.hibernate.SQL: DEBUG

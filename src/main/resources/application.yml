@@ -1,0 +1,107 @@
+spring:
+  application:
+    name: lipaharaka-api
+  profiles:
+    active: ${SPRING_PROFILES_ACTIVE:dev}
+  datasource:
+    url: ${DB_URL:jdbc:postgresql://localhost:5434/lipaharaka}
+    username: ${DB_USERNAME:lipaharaka}
+    password: ${DB_PASSWORD:lipaharaka}
+    hikari:
+      maximum-pool-size: ${DB_POOL_SIZE:10}
+      minimum-idle: 2
+  jpa:
+    hibernate:
+      ddl-auto: validate
+    properties:
+      hibernate:
+        jdbc.batch_size: 30
+        order_inserts: true
+        order_updates: true
+
+        enable_lazy_load_no_trans: true
+  flyway:
+    enabled: true
+    locations: classpath:db/migration
+    baseline-on-migrate: true
+  data:
+    redis:
+      host: ${REDIS_HOST:localhost}
+      port: ${REDIS_PORT:6379}
+  cache:
+    type: redis
+
+server:
+  port: ${PORT:8080}
+  shutdown: graceful
+  compression:
+    enabled: true
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,metrics,prometheus
+  endpoint:
+    health:
+      show-details: when_authorized
+
+springdoc:
+  swagger-ui:
+    path: /docs
+  api-docs:
+    path: /api-docs
+
+lipaharaka:
+  jwt:
+    secret: ${JWT_SECRET:CHANGE_ME_IN_PRODUCTION_min_32_bytes_______}
+    access-token-ttl-minutes: ${JWT_ACCESS_TTL_MIN:30}
+    refresh-token-ttl-days: ${JWT_REFRESH_TTL_DAYS:14}
+  otp:
+    ttl-minutes: 5
+    length: 6
+  mpesa:
+    base-url: ${MPESA_BASE_URL:https://sandbox.safaricom.co.ke}
+    consumer-key: ${MPESA_CONSUMER_KEY:}
+    consumer-secret: ${MPESA_CONSUMER_SECRET:}
+    shortcode: ${MPESA_SHORTCODE:}
+    passkey: ${MPESA_PASSKEY:}
+    callback-base-url: ${MPESA_CALLBACK_BASE_URL:https://api.lipaharaka.co.ke}
+  lender:
+    base-url: ${LENDER_BASE_URL:}
+    api-key: ${LENDER_API_KEY:}
+  advance:
+    fee-percentage: 0.03   # placeholder commercial term - confirm with partner lender agreement
+    max-advance-percentage: 0.90
+  reminders:
+    intervals-days-before-due: [3, 1]
+    intervals-days-after-due: [1, 7, 14]
+
+logging:
+  level:
+    root: INFO
+    com.lipaharaka.api: ${APP_LOG_LEVEL:INFO}
+  pattern:
+    console: "%d{yyyy-MM-dd HH:mm:ss} [%thread] %-5level %logger{36} - %msg%n"
+
+resilience4j:
+  circuitbreaker:
+    instances:
+      mpesa:
+        sliding-window-size: 20
+        failure-rate-threshold: 50
+        wait-duration-in-open-state: 30s
+        permitted-number-of-calls-in-half-open-state: 5
+      lender:
+        sliding-window-size: 20
+        failure-rate-threshold: 50
+        wait-duration-in-open-state: 60s
+        permitted-number-of-calls-in-half-open-state: 3
+  retry:
+    instances:
+      mpesa:
+        max-attempts: 3
+        wait-duration: 1s
+      lender:
+        max-attempts: 2
+        wait-duration: 2s
