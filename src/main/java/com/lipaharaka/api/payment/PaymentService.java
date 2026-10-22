@@ -62,25 +62,40 @@ public class PaymentService {
             throw new IllegalArgumentException("Phone number is required.");
         }
 
-        String normalized = rawPhoneNumber.trim().replace(" ", "");
-        if (normalized.startsWith("+254")) {
-            return "254" + normalized.substring(4);
+        String normalized = rawPhoneNumber.trim()
+                .replace(" ", "")
+                .replace("-", "")
+                .replace("(", "")
+                .replace(")", "");
+
+        if (normalized.isEmpty()) {
+            throw new IllegalArgumentException("Phone number is required.");
         }
-        if (normalized.startsWith("254")) {
-            return normalized;
+
+        if (normalized.startsWith("+")) {
+            normalized = normalized.substring(1);
         }
-        if (normalized.startsWith("0") && normalized.length() == 10) {
+
+        if (normalized.matches("^0\\d{9}$")) {
             return "254" + normalized.substring(1);
         }
-        return normalized;
+        if (normalized.matches("^254\\d{9}$")) {
+            return normalized;
+        }
+        if (normalized.matches("^7\\d{8}$")) {
+            return "254" + normalized;
+        }
+        if (normalized.matches("^2547\\d{8}$")) {
+            return normalized;
+        }
+        if (normalized.matches("^\\d{12}$")) {
+            return normalized;
+        }
+
+        throw new IllegalArgumentException("Phone number must be a valid Kenyan mobile number.");
     }
 
-    /**
-     * Handles the Daraja STK callback. Idempotent on mpesa_receipt_number: Safaricom retries
-     * callbacks on timeout, so the same receipt arriving twice must not double-credit the
-     * invoice — the unique index on transactions.mpesa_receipt_number is the hard backstop,
-     * this existence check is the fast path that avoids a doomed insert or a double-reconcile.
-     */
+
     @Transactional
     public void handleStkCallback(Map<String, Object> callbackPayload) {
         StkCallbackData data = StkCallbackData.parse(callbackPayload);
@@ -97,10 +112,7 @@ public class PaymentService {
                 .findByMpesaCheckoutRequestIdAndStatus(data.checkoutRequestId(), TransactionStatus.PENDING);
 
         if (pending.isEmpty()) {
-            // No matching PENDING transaction: either a very late/duplicate retry after we
-            // already reconciled it, or a callback for a request this instance never issued
-            // (e.g. after a redeploy). Logged for manual reconciliation rather than silently
-            // dropped, since real money moved on Safaricom's side either way.
+
             log.warn("No pending transaction found for checkoutRequestId={}; payload={}",
                     data.checkoutRequestId(), callbackPayload);
             return;
@@ -123,11 +135,7 @@ public class PaymentService {
                 data.receiptNumber(), txn.getAmount(), txn.getInvoiceId());
     }
 
-    /**
-     * FR-4.2/FR-5.4: applies the confirmed payment to the invoice and, if that invoice had a
-     * disbursed advance against it, offsets the advance in the same transaction so the two can
-     * never be left inconsistent (payment applied but advance never marked repaid, or vice versa).
-     */
+
     @Transactional
     public void reconcileInvoicePayment(UUID invoiceId, BigDecimal amount) {
         invoiceService.applyPayment(invoiceId, amount);

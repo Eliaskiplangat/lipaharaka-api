@@ -44,11 +44,16 @@ public class DarajaMpesaClient implements MpesaClient {
     @CircuitBreaker(name = "mpesa", fallbackMethod = "stkPushFallback")
     @Retry(name = "mpesa")
     public StkPushResult initiateStkPush(String phoneNumber, BigDecimal amount, String accountReference, String description) {
+        validateRequiredConfiguration();
+
         String accessToken = fetchAccessToken();
         String timestamp = LocalDateTime.now().format(TIMESTAMP_FORMAT);
         String password = Base64.getEncoder().encodeToString(
                 (properties.shortcode() + properties.passkey() + timestamp).getBytes());
 
+        String callbackUrl = properties.callbackBaseUrl().replaceAll("/+$", "") + "/api/v1/payments/mpesa/callback/stk";
+        String maskedPhone = phoneNumber.length() > 4 ? "******" + phoneNumber.substring(phoneNumber.length() - 4) : phoneNumber;
+        log.info("Initiating M-Pesa STK push for account {} to phone {} with callback {}", accountReference, maskedPhone, callbackUrl);
 
         Map<String, Object> body = new java.util.LinkedHashMap<>();
         body.put("BusinessShortCode", properties.shortcode());
@@ -59,7 +64,7 @@ public class DarajaMpesaClient implements MpesaClient {
         body.put("PartyA", phoneNumber);
         body.put("PartyB", properties.shortcode());
         body.put("PhoneNumber", phoneNumber);
-        body.put("CallBackURL", properties.callbackBaseUrl() + "/api/v1/payments/mpesa/callback/stk");
+        body.put("CallBackURL", callbackUrl);
         body.put("AccountReference", accountReference);
         body.put("TransactionDesc", description);
 
@@ -72,10 +77,26 @@ public class DarajaMpesaClient implements MpesaClient {
                 new HttpEntity<>(body, headers), Map.class);
 
         Map<?, ?> resp = response.getBody();
+        if (resp == null) {
+            throw new ExternalServiceException("M-Pesa", "Daraja STK response body was empty",
+                    new IllegalStateException("Daraja STK response body was empty"));
+        }
+
+        @SuppressWarnings("unchecked")
+        Map<String, Object> respMap = (Map<String, Object>) resp;
+
+        Object responseCode = respMap.get("ResponseCode");
+        if (responseCode != null && !"0".equals(String.valueOf(responseCode))) {
+            String errorDescription = String.valueOf(respMap.getOrDefault("ResponseDescription", "unknown"));
+            throw new ExternalServiceException("M-Pesa",
+                    "Daraja rejected the STK push request: " + errorDescription,
+                    new IllegalStateException("Daraja STK push rejected: " + responseCode));
+        }
+
         return new StkPushResult(
-                String.valueOf(resp.get("MerchantRequestID")),
-                String.valueOf(resp.get("CheckoutRequestID")),
-                String.valueOf(resp.get("ResponseDescription")));
+                String.valueOf(respMap.get("MerchantRequestID")),
+                String.valueOf(respMap.get("CheckoutRequestID")),
+                String.valueOf(respMap.get("ResponseDescription")));
     }
 
     @SuppressWarnings("unused")
@@ -123,7 +144,30 @@ public class DarajaMpesaClient implements MpesaClient {
         throw new ExternalServiceException("M-Pesa", "Unable to disburse funds right now.", t);
     }
 
+    private void validateRequiredConfiguration() {
+        if (properties.baseUrl() == null || properties.baseUrl().isBlank()) {
+            throw new IllegalStateException("MPESA_BASE_URL is required.");
+        }
+        if (properties.consumerKey() == null || properties.consumerKey().isBlank()) {
+            throw new IllegalStateException("MPESA_CONSUMER_KEY is required.");
+        }
+        if (properties.consumerSecret() == null || properties.consumerSecret().isBlank()) {
+            throw new IllegalStateException("MPESA_CONSUMER_SECRET is required.");
+        }
+        if (properties.shortcode() == null || properties.shortcode().isBlank()) {
+            throw new IllegalStateException("MPESA_SHORTCODE is required.");
+        }
+        if (properties.passkey() == null || properties.passkey().isBlank()) {
+            throw new IllegalStateException("MPESA_PASSKEY is required.");
+        }
+        if (properties.callbackBaseUrl() == null || properties.callbackBaseUrl().isBlank()) {
+            throw new IllegalStateException("MPESA_CALLBACK_BASE_URL is required.");
+        }
+    }
+
     private String fetchAccessToken() {
+        validateRequiredConfiguration();
+
         Instant now = Instant.now();
         if (cachedAccessToken != null && now.isBefore(accessTokenExpiry.minusSeconds(30L))) {
             return cachedAccessToken;
