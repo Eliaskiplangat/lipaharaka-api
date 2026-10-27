@@ -3,6 +3,11 @@ package com.lipaharaka.api.payment;
 import com.lipaharaka.api.common.response.ApiResponse;
 import com.lipaharaka.api.payment.dto.InitiatePaymentRequest;
 import com.lipaharaka.api.payment.dto.InitiatePaymentResponse;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.Parameter;
+import io.swagger.v3.oas.annotations.media.Content;
+import io.swagger.v3.oas.annotations.media.Schema;
+import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import org.slf4j.Logger;
@@ -26,12 +31,25 @@ public class PaymentController {
     }
 
     @PostMapping("/mpesa/invoices/{token}/initiate")
-    public ApiResponse<InitiatePaymentResponse> initiate(@PathVariable String token,
+    @Operation(summary = "Initiate M-Pesa STK push", description = "Starts a Daraja STK push for a public invoice token and the payer phone number.")
+    @ApiResponses({
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "200", description = "STK push initiated"),
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(
+                    responseCode = "400",
+                    description = "Phone number or invoice token invalid",
+                    content = @Content(schema = @Schema(implementation = com.lipaharaka.api.common.response.ApiError.class))
+            )
+    })
+    public ApiResponse<InitiatePaymentResponse> initiate(@Parameter(description = "Public invoice token", required = true) @PathVariable String token,
                                                           @Valid @RequestBody InitiatePaymentRequest request) {
         return ApiResponse.ok(paymentService.initiateInvoicePayment(token, request.payerPhoneNumber()));
     }
 
     @PostMapping("/mpesa/callback/stk")
+    @Operation(summary = "STK callback endpoint", description = "Safaricom callback endpoint that receives payment confirmation status updates.")
+    @ApiResponses({
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "200", description = "Callback accepted")
+    })
     public Map<String, Object> stkCallback(@RequestBody Map<String, Object> payload) {
         handleStkCallbackAsync(payload);
         return Map.of("ResultCode", 0, "ResultDesc", "Accepted");
