@@ -70,12 +70,12 @@ lipaharaka:
     ttl-minutes: 5
     length: 6
   mpesa:
-    base-url: ${MPESA_BASE_URL:https://sandbox.safaricom.co.ke}
-    consumer-key: ${MPESA_CONSUMER_KEY:}
-    consumer-secret: ${MPESA_CONSUMER_SECRET:}
-    shortcode: ${MPESA_SHORTCODE:}
-    passkey: ${MPESA_PASSKEY:}
-    callback-base-url: ${MPESA_CALLBACK_BASE_URL:https://api.lipaharaka.co.ke}
+    base-url: https://sandbox.safaricom.co.ke
+    consumer-key: ihG8Nh01k39D95wT7BftQYApGNTneocpLqD0XgrGCjFXkBjf
+    consumer-secret: PAG7LiRx77oIQqYvfn0C1CL13D9abOFScLEOi8NS4GMnAa3jT3bU1KCSh4hm30Dx
+    shortcode: "174379"
+    passkey: bfb279f9aa9bdbcf158e97dd71a467cd2e0c893059b10f78e6b72ada1ed2c919
+    callback-base-url: https://exciting-overcome-atop.ngrok-free.dev
   lender:
     base-url: ${LENDER_BASE_URL:}
     api-key: ${LENDER_API_KEY:}
