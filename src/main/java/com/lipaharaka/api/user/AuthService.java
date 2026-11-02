@@ -33,6 +33,13 @@ public class AuthService {
         otpService.requestOtp(phoneNumber, OtpPurpose.REGISTRATION);
     }
 
+    public void requestPasswordResetOtp(String phoneNumber) {
+        if (!userRepository.existsByPhoneNumber(phoneNumber)) {
+            throw new ConflictException("No account is registered with this phone number.");
+        }
+        otpService.requestOtp(phoneNumber, OtpPurpose.PASSWORD_RESET);
+    }
+
     @Transactional
     public AuthResponse register(RegisterRequest request) {
         if (userRepository.existsByPhoneNumber(request.phoneNumber())) {
@@ -49,6 +56,16 @@ public class AuthService {
         userRepository.save(user);
 
         return issueTokenResponse(user);
+    }
+
+    @Transactional
+    public void resetPassword(String phoneNumber, String otpCode, String newPassword) {
+        User user = userRepository.findByPhoneNumber(phoneNumber)
+                .orElseThrow(() -> new BadCredentialsException("No account is registered with this phone number."));
+
+        otpService.verifyOtpOrThrow(phoneNumber, OtpPurpose.PASSWORD_RESET, otpCode);
+        user.setPasswordHash(passwordEncoder.encode(newPassword));
+        userRepository.save(user);
     }
 
     public AuthResponse login(LoginRequest request) {

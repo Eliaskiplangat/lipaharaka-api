@@ -5,6 +5,7 @@ import com.lipaharaka.api.user.dto.AuthResponse;
 import com.lipaharaka.api.user.dto.LoginRequest;
 import com.lipaharaka.api.user.dto.RegisterRequest;
 import com.lipaharaka.api.user.dto.RequestOtpRequest;
+import com.lipaharaka.api.user.dto.ResetPasswordRequest;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.media.Content;
 import io.swagger.v3.oas.annotations.media.Schema;
@@ -47,6 +48,13 @@ public class AuthController {
         return ResponseEntity.ok(ApiResponse.ok(null));
     }
 
+    @PostMapping("/password-reset/request")
+    @Operation(summary = "Request a password reset OTP", description = "Sends a reset code to an existing account holder.")
+    public ResponseEntity<ApiResponse<Void>> requestPasswordResetOtp(@Valid @RequestBody RequestOtpRequest request) {
+        authService.requestPasswordResetOtp(request.phoneNumber());
+        return ResponseEntity.ok(ApiResponse.ok(null));
+    }
+
     @PostMapping("/register")
     @Operation(summary = "Register a new user", description = "Creates a new SME owner account after OTP verification.")
     @ApiResponses({
@@ -59,6 +67,13 @@ public class AuthController {
     })
     public ResponseEntity<ApiResponse<AuthResponse>> register(@Valid @RequestBody RegisterRequest request) {
         return ResponseEntity.status(HttpStatus.CREATED).body(ApiResponse.ok(authService.register(request)));
+    }
+
+    @PostMapping("/password-reset")
+    @Operation(summary = "Reset a user's password", description = "Verifies OTP and updates the account password for an existing user.")
+    public ResponseEntity<ApiResponse<Void>> resetPassword(@Valid @RequestBody ResetPasswordRequest request) {
+        authService.resetPassword(request.phoneNumber(), request.otpCode(), request.newPassword());
+        return ResponseEntity.ok(ApiResponse.ok(null));
     }
 
     @PostMapping("/login")
