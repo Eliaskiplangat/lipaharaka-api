@@ -11,7 +11,7 @@ import java.util.UUID;
 public record InvoiceResponse(
         UUID id, String invoiceNumber, InvoiceStatus status, LocalDate issueDate, LocalDate dueDate,
         BigDecimal subtotal, BigDecimal taxAmount, BigDecimal totalAmount, BigDecimal amountPaid,
-        BigDecimal outstandingBalance, String buyerName, String shareableToken,
+        BigDecimal outstandingBalance, String buyerName, String buyerPhoneNumber, String shareableToken,
         List<InvoiceLineItemResponse> lineItems
 ) {
     public static InvoiceResponse from(Invoice invoice) {
@@ -19,7 +19,10 @@ public record InvoiceResponse(
                 invoice.getId(), invoice.getInvoiceNumber(), invoice.getStatus(),
                 invoice.getIssueDate(), invoice.getDueDate(), invoice.getSubtotal(),
                 invoice.getTaxAmount(), invoice.getTotalAmount(), invoice.getAmountPaid(),
-                invoice.outstandingBalance(), invoice.getBuyer().getName(), invoice.getShareableToken(),
+                invoice.outstandingBalance(),
+                invoice.getBuyer() != null ? invoice.getBuyer().getName() : null,
+                invoice.getBuyer() != null ? invoice.getBuyer().getPhoneNumber() : null,
+                invoice.getShareableToken(),
                 invoice.getLineItems().stream().map(InvoiceLineItemResponse::from).toList()
         );
     }

@@ -46,6 +46,15 @@ public class InvoiceController {
                 .body(ApiResponse.ok(InvoiceResponse.from(invoiceService.create(request))));
     }
 
+    @PutMapping("/{id}/buyer-phone")
+    @PreAuthorize("hasRole('SME_OWNER')")
+    @Operation(summary = "Update buyer phone number for an invoice", description = "Allows the seller to update the buyer phone number before sending the payment prompt.")
+    public ResponseEntity<ApiResponse<InvoiceResponse>> updateBuyerPhoneNumber(
+            @Parameter(description = "Invoice UUID", required = true) @PathVariable UUID id,
+            @RequestBody com.lipaharaka.api.invoice.dto.UpdateBuyerPhoneRequest request) {
+        return ResponseEntity.ok(ApiResponse.ok(InvoiceResponse.from(invoiceService.updateBuyerPhoneNumber(id, request.phoneNumber()))));
+    }
+
     @PostMapping("/{id}/send")
     @PreAuthorize("hasRole('SME_OWNER')")
     @Operation(summary = "Send an invoice", description = "Marks the invoice as sent and delivers it via configured channels to the buyer.")

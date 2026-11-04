@@ -107,6 +107,17 @@ public class InvoiceService {
     }
 
     @Transactional
+    public Invoice updateBuyerPhoneNumber(UUID invoiceId, String phoneNumber) {
+        Invoice invoice = getOwnedInvoiceOrThrow(invoiceId);
+        if (phoneNumber == null || phoneNumber.isBlank()) {
+            throw new ValidationException("Buyer phone number is required.");
+        }
+
+        invoice.getBuyer().setPhoneNumber(phoneNumber.trim());
+        return invoiceRepository.save(invoice);
+    }
+
+    @Transactional
     @Audited(action = "INVOICE_SENT", entityType = "Invoice")
     public Invoice send(UUID invoiceId) {
         Invoice invoice = getOwnedInvoiceOrThrow(invoiceId);

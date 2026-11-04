@@ -4,6 +4,7 @@ import com.lipaharaka.api.business.Business;
 import com.lipaharaka.api.business.BusinessService;
 import com.lipaharaka.api.invoice.dto.CreateInvoiceRequest;
 import com.lipaharaka.api.invoice.dto.InvoiceLineItemRequest;
+import com.lipaharaka.api.invoice.dto.InvoiceResponse;
 import com.lipaharaka.api.common.exception.ForbiddenException;
 import com.lipaharaka.api.notification.EmailGateway;
 import com.lipaharaka.api.notification.SmsGateway;
@@ -97,6 +98,48 @@ class InvoiceServiceTest {
 
         assertThat(updated.getStatus()).isEqualTo(InvoiceStatus.PAID);
         assertThat(updated.outstandingBalance()).isEqualByComparingTo("0.00");
+    }
+
+    @Test
+    void invoiceResponse_includesBuyerPhoneNumber() {
+        Invoice invoice = new Invoice();
+        Buyer buyer = new Buyer();
+        buyer.setName("Jane Buyer");
+        buyer.setPhoneNumber("+254712345678");
+        invoice.setBuyer(buyer);
+        invoice.setInvoiceNumber("INV-1001");
+        invoice.setShareableToken("abc123");
+        invoice.setTotalAmount(new BigDecimal("1000.00"));
+        invoice.setAmountPaid(BigDecimal.ZERO);
+
+        InvoiceResponse response = InvoiceResponse.from(invoice);
+
+        assertThat(response.buyerName()).isEqualTo("Jane Buyer");
+        assertThat(response.buyerPhoneNumber()).isEqualTo("+254712345678");
+        assertThat(response.shareableToken()).isEqualTo("abc123");
+    }
+
+    @Test
+    void updateBuyerPhoneNumber_updatesInvoiceBuyerPhone() {
+        Business business = approvedBusiness();
+        Buyer buyer = new Buyer();
+        buyer.setBusiness(business);
+        buyer.setName("Jane Buyer");
+        buyer.setPhoneNumber("+254700000000");
+
+        Invoice invoice = new Invoice();
+        invoice.setId(UUID.randomUUID());
+        invoice.setBusiness(business);
+        invoice.setBuyer(buyer);
+        invoice.setStatus(InvoiceStatus.SENT);
+
+        when(businessService.getForCurrentUser()).thenReturn(business);
+        when(invoiceRepository.findById(invoice.getId())).thenReturn(Optional.of(invoice));
+        when(invoiceRepository.save(any(Invoice.class))).thenAnswer(inv -> inv.getArgument(0));
+
+        Invoice updated = invoiceService.updateBuyerPhoneNumber(invoice.getId(), "+254712345678");
+
+        assertThat(updated.getBuyer().getPhoneNumber()).isEqualTo("+254712345678");
     }
 
     private Business approvedBusiness() {
