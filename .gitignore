@@ -6,3 +6,4 @@ target/
 .env
 *.log
 lipaharaka_local.sql
+*.application.yml
