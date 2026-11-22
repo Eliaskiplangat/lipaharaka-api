@@ -70,12 +70,12 @@ lipaharaka:
     ttl-minutes: 5
     length: 6
   mpesa:
-    base-url: ${MPESA_BASE_URL:}
+    base-url: ${MPESA_BASE_URL:https://sandbox.safaricom.co.ke}
     consumer-key: ${MPESA_CONSUMER_KEY:}
     consumer-secret: ${MPESA_CONSUMER_SECRET:}
-    short-code: ${MPESA_SHORT_CODE:}
+    shortcode: ${MPESA_SHORTCODE:174379}
     passkey: ${MPESA_PASSKEY:}
-    callback-url: ${MPESA_CALLBACK_URL:http://localhost:${PORT:8080}/api/v1/mpesa/callback}
+    callback-base-url: ${MPESA_CALLBACK_BASE_URL:http://localhost:${PORT:8080}}
   lender:
     base-url: ${LENDER_BASE_URL:}
     api-key: ${LENDER_API_KEY:}
